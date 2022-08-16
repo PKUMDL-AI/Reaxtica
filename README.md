@@ -1,23 +1,30 @@
 # Reaxtica
-Reaxtica: A knowledge-guided machine learning platform for fast and accurate reaction selectivity and yield prediction.
 
+Reaxtica: A knowledge-guided machine learning platform for fast and accurate reaction selectivity and yield prediction. The webserver could be found in this [link](http://www.pkumdl.cn:8000/reaxtica/).
 
 All four modules have been updated.
 
 ## Requirement
+
 - Python 3.7.6
 - RDKit 2021.03.2
 - openbabel 3.1.1
 - qmdesc 1.0.6
 - scikit-learn 0.23.1
 - xgboost 1.5.0
-- Networkx 2.4
 - Pandas 0.23.4
 
-
+## conda environment
+```
+conda env create -n Reaxtica -f environment.yml
+conda activate Reaxtica
+```
 ## Usage
+
 Examples
+
 ### DA
+
 ```
 cd DA
 # retrain the regioselectivity
@@ -30,7 +37,9 @@ python predict_DA.py -m predict_file -rxn DA_19_all.csv
 python predict_DA.py -rxn 'COC(=O)N(CC1=CC=CC=C1)C=CC=C.C=CC=O' --temp 20 --acid 1
 # (the value of temperature is set as 20 while the acid is set as None as default if they are not typed in)
 ```
+
 ### CPA
+
 ```
 cd CPA
 # retrain random validation
@@ -41,7 +50,9 @@ python predict_CPA.py -m retrain -dataset test_sub(or test_cat, test_sub-cat)
 python predict_CPA.py -rxn 'O=P1(O)OC2=C(C3=CC=CC=C3)C=C4C(C=CC=C4)=C2C5=C(O1)C(C6=CC=CC=C6)=CC7=C5C=CC=C7.O=C(C1=CC=CC=C1)/N=C/C2=CC=C(C(F)(F)F)C=C2.SC1=CC=CC=C1C'
 # (order := $ligand.$imine.$thiol)
 ```
+
 ### BHC
+
 ```
 cd BHC
 # retrain random validation
@@ -52,7 +63,9 @@ python predict_BHC.py -m retrain -dataset Test1(or Test2, Test3, Test4)
 python predict_BHC.py --rxn 'CC(C)C(C=C(C(C)C)C=C1C(C)C)=C1C2=C(P([C@@]3(C[C@@H]4C5)C[C@H](C4)C[C@H]5C3)[C@]6(C7)C[C@@H](C[C@@H]7C8)C[C@@H]8C6)C(OC)=CC=C2OC.CC1=CC(C)=NO1.CN(C)P(N(C)C)(N(C)C)=NP(N(C)C)(N(C)C)=NCC.ClC1=NC=CC=C1'
 # (order := $ligand.$additive.$base.$halide)
 ```
+
 ### SMC
+
 ```
 cd SMC
 # retrain random validation for USPTO
