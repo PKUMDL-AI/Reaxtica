@@ -1,9 +1,7 @@
 # Reaxtica
 
 Reaxtica: A knowledge-guided machine learning platform for fast and accurate reaction selectivity and yield prediction. The webserver could be found in this [link](http://www.pkumdl.cn:8000/reaxtica/).
-
-All four modules have been updated.
-
+	
 ## Requirement
 
 - Python 3.7.6
@@ -14,14 +12,12 @@ All four modules have been updated.
 - xgboost 1.5.0
 - Pandas 0.23.4
 
-## conda environment
+## Conda environment
 ```
 conda env create -n Reaxtica -f environment.yml
 conda activate Reaxtica
 ```
 ## Usage
-
-Examples
 
 ### DA
 
