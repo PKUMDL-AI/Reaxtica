@@ -2,7 +2,6 @@ import os
 import sys
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import KFold
 from sklearn.ensemble import RandomForestRegressor
 from qmdesc import ReactivityDescriptorHandler
@@ -36,7 +35,7 @@ parser.add_argument('--DA_jobtype', default='all', choices=['regio', 'all'],
 parser.add_argument('-dataset', '--dataset', default='', help='The dataset you are going to train or predict.')
 args = parser.parse_args()
 
-def operate_DA(r1_sml, r2_sml):
+def operate_DA(r1_sml, r2_sml): # running virtial DA reactions
     rxn = AllChem.ReactionFromSmarts(
         '[C;+0:1]=[C;+0:2].[C;+0:3]=[C;+0:4]-[C;+0:5]=[C;+0:6]>>[C;+0:3]1-[C;+0:1]-[C;+0:2]-[C;+0:6]-[C;+0:5]=[C;+0:4]-1')
     sigma_trans_subs = [Chem.MolFromSmiles(sub_sml) for sub_sml in
@@ -88,7 +87,7 @@ def get_qmdesc_feature(sml, re_calc=False):
     return np.array(atom_feature)
 
 
-def is_regioisomer(sml1, sml2):
+def is_regioisomer(sml1, sml2): # check whether two products are regioisomers
     mol1, mol2 = Chem.MolFromSmiles(sml1), Chem.MolFromSmiles(sml2)
     rxn = AllChem.ReactionFromSmarts(
         '[C;+0:3]1-[C;+0:1]-[C;+0:2]-[C;+0:6]-[C;+0:5]=[C;+0:4]-1>>[C;+0:1]=[C;+0:2].[C;+0:3]=[C;+0:4]-[C;+0:5]=['
@@ -159,7 +158,6 @@ def get_DA_dscp(sml, products_run, jobtype, temp, acid):
     rxn_vector = np.array(rxn_vector).reshape(valid_p_num * 4, -1)
     rxn_vector = np.concatenate([rxn_vector, np.array([temp for _ in range(rxn_vector.shape[0])]).reshape(-1, 1),
                                      np.array([acid for _ in range(rxn_vector.shape[0])]).reshape(-1, 1)], axis=1)
-    # print(np.array(rxn_vector).shape)
     return rxn_vector, label
 
 
@@ -176,7 +174,6 @@ def vectorize_DA(filename, jobtype):
         rxn_vector, label = get_DA_dscp(sml, possible_products, jobtype, df['Temp'][i], df['Lewis_acid'][i])
         rxn_vectors.append(rxn_vector)
         labels.append(label)
-    # np.set_printoptions(threshold=3)
     print('Illegal inputs:\n')
     print(np.array(err_list))
     print('Num of illegal input:', str(err_num) + ',', 'Percentage:', str('%.2f' % (100 * err_num / df.shape[0])) + '%')
@@ -215,11 +212,10 @@ def classifier_single_DA(num_fold=5, model_name='best.model', recalc=False, file
         model = rf
         acc = 0
         model.fit(X_train, y_train)
-        # model.fit([i for j in X for i in j], [i for j in Y for i in j])
         for i, xtest in enumerate(X_test):
             y_pred = model.predict(xtest)
             if jobtype == 'regio':
-                pred_value = np.array([p[0] - p[1] - p[2] + p[3] for p in y_pred.reshape(-1, 4)])
+                pred_value = np.array([p[0] - p[1] - p[2] + p[3] for p in y_pred.reshape(-1, 4)]) # enumerating all possible symmetry
                 if np.argmax(pred_value) == np.array(
                         [y_test[i][j] for j in range(len(y_test[i])) if j % 4 == 0]).argmax():
                     acc += 1
@@ -298,7 +294,6 @@ def predict_file_DA(filepath='DA_19_all.csv', model_name='all.model', save_name=
         dscp, _ = get_DA_dscp(df['rxn_smiles'][i], products_run, jobtype, df['Temp'][i], df['Lewis_acid'][i])
         ddscp = (np.array(dscp) - np.array(dscp).mean(axis=0))[:, :50]
         dscp = np.concatenate([np.array(dscp), ddscp], axis=1)
-        # dscp = scaler.transform(dscp)
         model = joblib.load(f'saved_models/{model_name}')
         outcomes = np.array(model.predict(dscp))
         if jobtype == 'regio':

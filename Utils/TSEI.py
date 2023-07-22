@@ -1,10 +1,7 @@
-import networkx.exception
 from rdkit import Chem
-from rdkit.Chem import AllChem
 import numpy as np
 import pandas as pd
 import networkx as nx
-from matplotlib import pyplot as plt
 
 # Special thanks to Yingze Wang in CCME, Peking Univ. for contributing this script.
 
@@ -64,6 +61,7 @@ testmol = Chem.AddHs(testmol)
 print([calc_TSEI(testmol, [i for i in range(len(testmol.GetAtoms())) if i != j], j) for j in range(len(testmol.GetAtoms()))])'''
 
 def main():
+    from matplotlib import pyplot as plt
     df = pd.read_csv('TSEI_sample.csv', index_col=None)
     this_TSEI = []
     for i in range(df.shape[0]):

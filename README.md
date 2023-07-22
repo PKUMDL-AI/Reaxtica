@@ -15,6 +15,7 @@ Descriptors, datasets and model descriptions for four reaction types. The colore
 - scikit-learn 0.23.1
 - xgboost 1.5.0
 - Pandas 0.23.4
+- networkx 2.6.3
 
 ## Conda environment
 ```

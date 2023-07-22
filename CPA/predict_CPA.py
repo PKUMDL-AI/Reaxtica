@@ -9,8 +9,7 @@ from openbabel import openbabel
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
 from qmdesc import ReactivityDescriptorHandler
-from tqdm import trange, tqdm
-from matplotlib import pyplot as plt
+from tqdm import trange
 import argparse
 
 sys.path.append('..')
@@ -29,6 +28,7 @@ parser.add_argument('--recalc', default=False, help='Whether to recalculate the 
 parser.add_argument('-dataset', '--dataset', default='', help='The dataset you are going to train or predict.')
 args = parser.parse_args()
 
+# this is the parameters when using params from Sterimol
 B_dict = {'O=P1(O)OC2=C(C3=C(F)C=C(OC)C=C3F)C=C4C(C=CC=C4)=[C@]2[C@]5=C(O1)C(C6=C(F)C=C(OC)C=C6F)=CC7=C5C=CC=C7': (
     8.90106605997137, 1.7191601056396644, 3.714652652864814),
     'O=P1(O)OC2=C(C3=CC(C)=C(OC(C)C)C(C)=C3)C=C4C(C=CC=C4)=C2C5=C(O1)C(C6=CC(C)=C(OC(C)C)C(C)=C6)=CC7=C5C=CC=C7': (
@@ -127,7 +127,7 @@ def Boltzmann_normalize(conf_energy, properties):
 catalyst_num = 0
 
 
-def get_qmdesc_CPA(x):
+def get_qmdesc_CPA(x): # This is the function to calculate the descriptors
     global B_dict, catalyst_num
     try:
         catalyst, imine, thiol = Chem.MolFromSmiles(x['Catalyst']), Chem.MolFromSmiles(
@@ -229,7 +229,7 @@ def get_qmdesc_CPA(x):
         descriptor += [B_dict[c_sml][0], B_dict[c_sml][1], B_dict[c_sml][2]]
     else:
         mol = Chem.AddHs(cat_sub_mol)
-        AllChem.EmbedMultipleConfs(mol, numConfs=5)
+        AllChem.EmbedMultipleConfs(mol, numConfs=5) # generating conformations to calculate steric descriptors
         opt_output = AllChem.MMFFOptimizeMoleculeConfs(mol)
         MMFF_energy = np.array([o[1] for o in opt_output])
         steric = []
@@ -277,8 +277,6 @@ def retrain_yield_RF(sheetname, num_fold=5, model_name='best.model', recalc=Fals
             X = np.load(f'saved_descriptors/CPA_{sheet}_dscp.npy', allow_pickle=True)
             Y = pd.read_excel('datasets/CPA_input.xlsx', sheet).Output.values
             X = np.array([x.reshape(-1) for x in X])
-            # scaler = StandardScaler()
-            # X = scaler.fit_transform(X)
             orig_X = X
             R2, RMSE, MAE = [], [], []
             max_R2 = 0
@@ -288,7 +286,6 @@ def retrain_yield_RF(sheetname, num_fold=5, model_name='best.model', recalc=Fals
                 model = RandomForestRegressor(oob_score=True, n_estimators=500)
                 model.fit(X_train, y_train)
                 y_pred = model.predict(X_test)
-                y_pred_train = model.predict(X_train)
                 R2.append(r2_score(y_test, y_pred))
                 RMSE.append(mean_squared_error(y_test, y_pred) ** 0.5)
                 MAE.append(mean_absolute_error(y_test, y_pred))
@@ -302,14 +299,12 @@ def retrain_yield_RF(sheetname, num_fold=5, model_name='best.model', recalc=Fals
             average_R2.append(np.array(R2).mean())
             average_RMSE.append(np.array(RMSE).mean())
             average_MAE.append(np.array(MAE).mean())
-        sheet = 'FullCV_10'
+        sheet = 'FullCV_10' # 10 times random split
         if not os.path.exists(f'saved_descriptors/CPA_{sheet}_dscp.npy') or recalc:
             gen_CPA_input(sheet)
         X = np.load(f'saved_descriptors/CPA_{sheet}_dscp.npy', allow_pickle=True)
         Y = pd.read_excel('datasets/CPA_input.xlsx', sheet).Output.values
         X = np.array([x.reshape(-1) for x in X])
-        # scaler = StandardScaler()
-        # X = scaler.fit_transform(X)
         orig_X = X
         R2, RMSE, MAE = [], [], []
         max_R2 = 0
@@ -319,7 +314,6 @@ def retrain_yield_RF(sheetname, num_fold=5, model_name='best.model', recalc=Fals
             model = RandomForestRegressor(oob_score=True, n_estimators=500)
             model.fit(X_train, y_train)
             y_pred = model.predict(X_test)
-            y_pred_train = model.predict(X_train)
             R2.append(r2_score(y_test, y_pred))
             RMSE.append(mean_squared_error(y_test, y_pred) ** 0.5)
             MAE.append(mean_absolute_error(y_test, y_pred))
@@ -347,8 +341,6 @@ def retrain_yield_RF(sheetname, num_fold=5, model_name='best.model', recalc=Fals
         X = np.load(f'saved_descriptors/CPA_{sheetname}_dscp.npy', allow_pickle=True)
         Y = pd.read_excel('datasets/CPA_input.xlsx', sheetname).Output.values
         X = np.array([x.reshape(-1) for x in X])
-        # scaler = StandardScaler()
-        # X = scaler.fit_transform(X)
         orig_X = X
         R2, RMSE, MAE = [], [], []
         max_R2 = 0
@@ -358,25 +350,12 @@ def retrain_yield_RF(sheetname, num_fold=5, model_name='best.model', recalc=Fals
             model = RandomForestRegressor(oob_score=True, n_estimators=500)
             model.fit(X_train, y_train)
             y_pred = model.predict(X_test)
-            y_pred_train = model.predict(X_train)
             R2.append(r2_score(y_test, y_pred))
             RMSE.append(mean_squared_error(y_test, y_pred) ** 0.5)
             MAE.append(mean_absolute_error(y_test, y_pred))
             if max_R2 < r2_score(y_test, y_pred):
                 joblib.dump(model, f'saved_models/{sheetname}_{model_name}')
                 max_R2 = r2_score(y_test, y_pred)
-                '''
-                if _ == 4:
-                plt.scatter(y_train, y_pred_train, c='r', alpha=0.2, label='Train')
-                plt.scatter(y_test, y_pred, alpha=0.4, label='Predicted')
-                plt.xlim(-1, 5)
-                plt.ylim(-1, 5)
-                plt.plot([-1, 5], [-1, 5])
-                plt.xlabel('Observed ddG')
-                plt.ylabel('Predicted ddG')
-                plt.title(f'R2: {round(R2[-1], 4)}\nRMSE: {round(RMSE[-1], 2)}\nMAE: {round(MAE[-1], 2)}')
-                plt.legend()
-                plt.show()'''
         print(f'There are prediction outputs after {num_fold}-times training based on RandomForest:')
         print('RandomForest' + '|  R2_score:', '%.4f' % np.array(R2).mean() + ' ± ' + '%.4f' % np.array(R2).std(),
               ' RMSE:', '%.3f' % np.array(RMSE).mean() + ' ± ' + '%.3f' % np.array(RMSE).std(),

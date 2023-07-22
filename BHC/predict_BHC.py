@@ -5,8 +5,6 @@ import pandas as pd
 import numpy as np
 from rdkit import Chem
 from qmdesc import ReactivityDescriptorHandler
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestRegressor
 from xgboost import XGBRegressor
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 from tqdm import trange
@@ -28,7 +26,7 @@ parser.add_argument('-dataset', '--dataset', default='', help='The dataset you a
 args = parser.parse_args()
 
 
-def get_qmdesc_BHC(x):
+def get_qmdesc_BHC(x): # generate descriptors for BHC
     try:
         ligand, additive, base, halide = Chem.MolFromSmiles(x['Ligand']), Chem.MolFromSmiles(
             x['Additive']), Chem.MolFromSmiles(x['Base']), Chem.MolFromSmiles(x['Aryl halide'])
@@ -47,7 +45,7 @@ def get_qmdesc_BHC(x):
     descriptor = []
 
     for atom in ligand.GetAtoms():
-        if atom.GetAtomicNum() == 15:
+        if atom.GetAtomicNum() == 15: # P
             ligand_P_num = atom.GetIdx()
     descriptor += ([infos[0][j][ligand_P_num] for j in list(infos[0].keys())[1:4]] + [
         infos[0]['NMR'][ligand_P_num]] + [tseis[0][ligand_P_num]])
@@ -70,7 +68,7 @@ def get_qmdesc_BHC(x):
 
     base_N_nums = []
     for atom in base.GetAtoms():
-        if atom.GetAtomicNum() == 7:
+        if atom.GetAtomicNum() == 7: # N
             base_N_nums.append(atom.GetIdx())
     base_info = [[infos[2][j][base_N_num] for j in list(infos[2].keys())[1:4]] + [
         infos[2]['NMR'][base_N_num]] + [tseis[2][base_N_num]] for base_N_num in base_N_nums]
@@ -78,7 +76,7 @@ def get_qmdesc_BHC(x):
     descriptor += base_info
 
     for atom in halide.GetAtoms():
-        if atom.GetAtomicNum() in [17, 35, 53]:
+        if atom.GetAtomicNum() in [17, 35, 53]: # Cl, Br, I
             halide_X_num = atom.GetIdx()
             halide_C_num = atom.GetNeighbors()[0].GetIdx()
             halide_bond_num = atom.GetBonds()[0].GetIdx()
@@ -98,7 +96,7 @@ def gen_BHC_input(sheetname):
     np.save(f'saved_descriptors/{sheetname}.npy', dscp)
 
 
-def classifier_yield_RF(sheetname, num_fold=5, model_name='best.model', recalc=False):
+def classifier_yield_RF(sheetname, num_fold=5, model_name='best.model', recalc=False): # generate model for BHC
     analyzed = pd.read_excel('../Utils/analyzed_descriptor.xlsx').BHC_delta_R_square.values
     if sheetname == 'random':
         split_num = 2767
@@ -113,7 +111,6 @@ def classifier_yield_RF(sheetname, num_fold=5, model_name='best.model', recalc=F
             R2, RMSE, MAE = [], [], []
             max_R2 = 0
             for _ in trange(num_fold):
-                # X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.3)
                 X_train, X_test, y_train, y_test = X[:split_num], X[split_num:], Y[:split_num], Y[split_num:]
                 model = XGBRegressor()
                 model.fit(X_train, y_train)
@@ -140,7 +137,6 @@ def classifier_yield_RF(sheetname, num_fold=5, model_name='best.model', recalc=F
         R2, RMSE, MAE = [], [], []
         max_R2 = 0
         for _ in trange(num_fold):
-            # X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.3)
             X_train, X_test, y_train, y_test = X[:split_num], X[split_num:], Y[:split_num], Y[split_num:]
             model = XGBRegressor()
             model.fit(X_train, y_train)
@@ -180,7 +176,6 @@ def classifier_yield_RF(sheetname, num_fold=5, model_name='best.model', recalc=F
         R2, RMSE, MAE = [], [], []
         max_R2 = 0
         for _ in trange(num_fold):
-            # X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.3)
             X_train, X_test, y_train, y_test = X[:split_num], X[split_num:], Y[:split_num], Y[split_num:]
             model = XGBRegressor()
             model.fit(X_train, y_train)
