@@ -7,11 +7,9 @@ from rdkit import Chem
 from qmdesc import ReactivityDescriptorHandler
 from sklearn.model_selection import KFold, train_test_split
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.preprocessing import StandardScaler
-from tqdm import trange, tqdm
+from tqdm import tqdm
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 from rdkit.Chem import AllChem
-from matplotlib import pyplot as plt
 import argparse
 
 sys.path.append('..')
@@ -184,7 +182,7 @@ def gen_SMC_input():
     np.save(f'saved_descriptors/SMC_dscp_Reaxys.npy', dscp)
 
 
-def classifier_yield_RF(num_fold=5, model_name='Reaxys.model', recalc=False):
+def classifier_yield_RF(num_fold=5, model_name='SMC_Reaxys.model', recalc=False):
     analyzed = pd.read_excel('../Utils/analyzed_descriptor.xlsx').SMC_R2_Reaxys.values
     if not os.path.exists('saved_descriptors/SMC_dscp_Reaxys.npy') or recalc:
         gen_SMC_input()
@@ -197,8 +195,6 @@ def classifier_yield_RF(num_fold=5, model_name='Reaxys.model', recalc=False):
     MAE = []
     kf = KFold(n_splits=num_fold, shuffle=True)
     for num, (train_index, test_index) in enumerate(tqdm(kf.split(X, Y))):
-        # X_train, X_test = X[train_index], X[test_index]
-        # y_train, y_test = Y[train_index], Y[test_index]
         X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.2, random_state=2022 + num)
         X_val, X_test, y_val, y_test = train_test_split(X_test, y_test, test_size=0.5, random_state=2202 + num)
         model = RandomForestRegressor(oob_score=True, n_estimators=500)
@@ -206,7 +202,6 @@ def classifier_yield_RF(num_fold=5, model_name='Reaxys.model', recalc=False):
         y_train = np.concatenate([y_train, y_val], axis=0)
         model.fit(X_train, y_train)
         y_pred = model.predict(X_test)
-        y_pred_train = model.predict(X_train)
         R2.append(r2_score(y_test, y_pred))
         RMSE.append(mean_squared_error(y_test, y_pred) ** 0.5)
         MAE.append(mean_absolute_error(y_test, y_pred))
@@ -215,7 +210,6 @@ def classifier_yield_RF(num_fold=5, model_name='Reaxys.model', recalc=False):
             joblib.dump(model, f'saved_models/{model_name}')
             max_R2 = r2_score(y_test, y_pred)
     print(f'There are prediction outputs after {num_fold}-times training based on RandomForest:')
-    # print('RandomForest' + ':', '%.4f' % np.array(Acc).mean() + ' ± ' + '%.4f' % np.array(Acc).std())
     print('RandomForest' + '|  R2_score:', '%.4f' % np.array(R2).mean() + ' ± ' + '%.4f' % np.array(R2).std(),
           ' RMSE:', '%.2f' % np.array(RMSE).mean() + ' ± ' + '%.2f' % np.array(RMSE).std(),
           ' MAE:', '%.2f' % np.array(MAE).mean() + ' ± ' + '%.2f' % np.array(MAE).std())

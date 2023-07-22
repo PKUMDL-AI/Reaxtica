@@ -7,11 +7,9 @@ from rdkit import Chem
 from qmdesc import ReactivityDescriptorHandler
 from sklearn.model_selection import KFold, train_test_split
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.preprocessing import StandardScaler
-from tqdm import trange, tqdm
+from tqdm import tqdm
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 from rdkit.Chem import AllChem
-from matplotlib import pyplot as plt
 import argparse
 
 sys.path.append('..')
@@ -192,16 +190,12 @@ def classifier_yield_RF(num_fold=5, model_name='USPTO.model', recalc=False):
     X = np.load('saved_descriptors/SMC_dscp_USPTO.npy', allow_pickle=True)
     X = np.array([np.array(x) for x in X])[:, np.argsort(analyzed)[:37]]
     Y = np.array(pd.read_csv('datasets/USPTO_SMC.csv').rxn_yield.values)
-    # scaler = StandardScaler()
     X = np.array([x.reshape(-1) for x in X])
-    # X = scaler.fit_transform(X)
     R2, RMSE = [], []
     max_R2 = -1
     MAE = []
     kf = KFold(n_splits=num_fold, shuffle=True)
     for num, (train_index, test_index) in enumerate(tqdm(kf.split(X, Y))):
-        # X_train, X_test = X[train_index], X[test_index]
-        # y_train, y_test = Y[train_index], Y[test_index]
         X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.2, random_state=2022 + num)
         X_val, X_test, y_val, y_test = train_test_split(X_test, y_test, test_size=0.5, random_state=2202 + num)
         model = RandomForestRegressor(oob_score=True, n_estimators=500)
@@ -209,26 +203,14 @@ def classifier_yield_RF(num_fold=5, model_name='USPTO.model', recalc=False):
         y_train = np.concatenate([y_train, y_val], axis=0)
         model.fit(X_train, y_train)
         y_pred = model.predict(X_test)
-        y_pred_train = model.predict(X_train)
         R2.append(r2_score(y_test, y_pred))
         RMSE.append(mean_squared_error(y_test, y_pred) ** 0.5)
         MAE.append(mean_absolute_error(y_test, y_pred))
         print(R2[-1], RMSE[-1], MAE[-1])
         if max_R2 < r2_score(y_test, y_pred):
-            '''plt.scatter(y_train, y_pred_train, c='r', alpha=0.2, label='Train')
-            plt.scatter(y_test, y_pred, alpha=0.4, label='Predicted')
-            plt.xlim(-5, 105)
-            plt.ylim(-5, 105)
-            plt.plot([-5, 105], [-5, 105])
-            plt.xlabel('Observed Yield/%')
-            plt.ylabel('Predicted Yield/%')
-            plt.title(f'R2: {round(R2[-1], 4)}\nRMSE: {round(RMSE[-1], 2)}\nMAE: {round(MAE[-1], 2)}')
-            plt.legend()
-            plt.show()'''
             joblib.dump(model, f'saved_models/{model_name}')
             max_R2 = r2_score(y_test, y_pred)
     print(f'There are prediction outputs after {num_fold}-times training based on RandomForest:')
-    # print('RandomForest' + ':', '%.4f' % np.array(Acc).mean() + ' ± ' + '%.4f' % np.array(Acc).std())
     print('RandomForest' + '|  R2_score:', '%.4f' % np.array(R2).mean() + ' ± ' + '%.4f' % np.array(R2).std(),
           ' RMSE:', '%.2f' % np.array(RMSE).mean() + ' ± ' + '%.2f' % np.array(RMSE).std(),
           ' MAE:', '%.2f' % np.array(MAE).mean() + ' ± ' + '%.2f' % np.array(MAE).std())
@@ -248,8 +230,11 @@ def predict_single_SMC(x, model_name='best.model'):
         dscp = get_qmdesc_SMC(SMC_sml)[np.argsort(analyzed)[:37]]
         model = joblib.load(f'saved_models/{model_name}')
         yield_pred = model.predict(dscp.reshape(1, -1))
-        print(f'The yield of this reaction is predicted to be {round(yield_pred.item(), 2)}%.')
-    except:
+        estimators_predictions = np.array([estimator.predict(dscp.reshape(1, -1)) for estimator in model.estimators_])  
+        std_predictions = np.std(estimators_predictions, axis=0)  
+        print(f'The yield of this reaction is predicted to be {round(yield_pred.item(), 2)} ± {round(std_predictions.item(), 2)} %.')
+    except Exception as e:
+        print(e)
         print('There\'s something wrong in your input, please check again.')
 
 

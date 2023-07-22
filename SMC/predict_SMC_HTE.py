@@ -5,11 +5,10 @@ from qmdesc import ReactivityDescriptorHandler
 import os
 import joblib
 import sys
-from tqdm import trange, tqdm
+from tqdm import trange
 from xgboost import XGBRegressor as XGBR
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 from rdkit.Chem import AllChem
-from matplotlib import pyplot as plt
 import argparse
 
 sys.path.append('..')
@@ -150,7 +149,6 @@ def classifier_yield_XGB(num_fold=10, model_name='SMC_XGB.model', recalc=False):
         R2.append(r2_score(y_test, y_pred))
         RMSE.append(mean_squared_error(y_test, y_pred) ** 0.5)
         MAE.append(mean_absolute_error(y_test, y_pred))
-        # print(R2[-1], RMSE[-1], MAE[-1])
         if max_R2 < r2_score(y_test, y_pred):
             joblib.dump(model, f'saved_models/SMC_HTE_{model_name}')
             max_R2 = r2_score(y_test, y_pred)
